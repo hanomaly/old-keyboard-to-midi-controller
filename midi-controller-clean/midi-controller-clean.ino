@@ -104,7 +104,8 @@ void setup()
 
 void loop()
 {
-
+  
+  // keyboard
   for (int colCtr = 0; colCtr < NUM_COLS; ++colCtr)
   {
     //scan next column
@@ -165,8 +166,16 @@ void loop()
   }
 
   // drums
-  for(int drumNumber = 0; drumNumber < 6; ++drumNumber){
-    processDrum(drumNumber);
+  for(int drumNo = 0; drumNo < 6; ++drumNo){
+    DRUM_VELOCITY = (analogRead(drumPin[drumNo]) / 1023.0) * 127;
+    if( drumOn[drumNo]==false && DRUM_VELOCITY > DRUM_TOL ){
+      sendMidiMessage(NOTE_ON_CMD,CHANNEL2,DRUM_NOTE[drumNo],DRUM_VELOCITY);
+      drumOn[drumNo]=true;
+    }
+    else if ( drumOn[drumNo]==true && DRUM_VELOCITY <= DRUM_TOL ) {
+      sendMidiMessage(NOTE_OFF_CMD,CHANNEL2,DRUM_NOTE[drumNo],DRUM_VELOCITY);
+      drumOn[drumNo]=false;
+    }
   }
 }
 
@@ -176,18 +185,6 @@ void sendMidiMessage(int cmd, int channel, int lsb, int msb) {
   Serial.write(cmd + channel); // send command plus the channel number
   Serial.write(lsb); // least significant bit 
   Serial.write(msb); // most significant bit
-}
-
-void processDrum(int drumNo) {
-  DRUM_VELOCITY = (analogRead(drumPin[drumNo]) / 1023.0) * 127;
-  if( drumOn[drumNo]==false && DRUM_VELOCITY > DRUM_TOL ){
-    sendMidiMessage(NOTE_ON_CMD,CHANNEL2,DRUM_NOTE[drumNo],DRUM_VELOCITY);
-    drumOn[drumNo]=true;
-  }
-  else if ( drumOn[drumNo]==true && DRUM_VELOCITY <= DRUM_TOL ) {
-    sendMidiMessage(NOTE_OFF_CMD,CHANNEL2,DRUM_NOTE[drumNo],DRUM_VELOCITY);
-    drumOn[drumNo]=false;
-  }
 }
 
 void scanColumn(int colNum)
