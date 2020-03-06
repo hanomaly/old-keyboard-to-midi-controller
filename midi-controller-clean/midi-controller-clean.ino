@@ -1,14 +1,40 @@
-#define NUM_ROWS 8
-#define NUM_COLS 7
+// midi channels
+const int CHANNEL1 = 0;
+const int CHANNEL2 = 1;
 
-#define NOTE_ON_CMD 144
-#define NOTE_OFF_CMD 128
-#define NOTE_VELOCITY 127
+// pitch bend
+const int PITCHBEND_CMD = 224;
+const int PB_LSB = 0;
+int PB_VALUE = 64;
+bool PBisOn = false;
 
-//MIDI baud rate
-#define SERIAL_RATE 31250 //31250 //when going through midi port
+// control change 
+const int CONTROLCHANGE1_CMD = 176;
+const int CC_LSB = 1;
+int CC_VALUE = 64;
+bool CCisOn = false;
 
-// Pin Definitions
+// notes
+const int NOTE_ON_CMD = 144;
+const int NOTE_OFF_CMD = 128;
+const int NOTE_VELOCITY = 127;
+
+// drums
+int DRUM_VELOCITY =  0;
+int DRUM_NOTE[] = {31,32,33,34,35,36}; 
+const int DRUM_TOL = 19;
+bool drumOn[] = {false,false,false,false,false,false};
+
+// joystick analog pins
+const int X_pin = 0;
+const int Y_pin = 1; 
+
+// drum pins
+const int drumPin[] = {2,3,4,5,6,7};
+
+// keyboard matrix
+const int NUM_ROWS = 8;
+const int NUM_COLS = 7;
 
 // Row input pins
 const int row1Pin = 5;
@@ -41,29 +67,14 @@ int bits[] =
   B00000001
 };
 
-// for the joystick
-int lsb = 0;
-int msb = 0;
-int msb1 = 0;
-const int pitchbend = 224;
-const int controlchange = 176;
-//const int SW_pin = 2; // digital pin connected to switch output
-const int X_pin = 0; // analog pin connected to X output
-const int Y_pin = 1; // analog pin connected to Y output
-bool pb = false;
-bool cc = false;
-
-// drums
-const int dp1 = 2;
-int hitavg = 0;
-int vel =  0;
-bool drumon = false;
-int drumtol = 150;
+// MIDI baud rate
+const int SERIAL_RATE = 31250; // needs to be 31250 when going through midi port, can be 9600 for hairless
 
 void setup()
 {
-  int note = 31;
-
+  
+  int note = 31; // G1
+  
   for(int colCtr = 0; colCtr < NUM_COLS; ++colCtr)
   {
     for(int rowCtr = 0; rowCtr < NUM_ROWS; ++rowCtr)
@@ -87,10 +98,6 @@ void setup()
   pinMode(row6Pin, INPUT);
   pinMode(row7Pin, INPUT);
   pinMode(row8Pin, INPUT);
-
-  // for joystick switch
-  //pinMode(SW_pin, INPUT);
-  //digitalWrite(SW_pin, HIGH);
 
   Serial.begin(SERIAL_RATE);
 }
@@ -120,7 +127,7 @@ void loop()
       if(rowValue[rowCtr] != 0 && !keyPressed[rowCtr][colCtr])
       {
         keyPressed[rowCtr][colCtr] = true;
-        noteOn(rowCtr,colCtr);
+        sendMidiMessage(NOTE_ON_CMD, CHANNEL1, keyToMidiMap[rowCtr][colCtr], NOTE_VELOCITY);
       }
     }
 
@@ -130,66 +137,57 @@ void loop()
       if(rowValue[rowCtr] == 0 && keyPressed[rowCtr][colCtr])
       {
         keyPressed[rowCtr][colCtr] = false;
-        noteOff(rowCtr,colCtr);
+        sendMidiMessage(NOTE_OFF_CMD, CHANNEL1, keyToMidiMap[rowCtr][colCtr], NOTE_VELOCITY);
       }
     }
   }
 
-  // joystick - pitchbend
-  msb = (analogRead(X_pin) / 1024.0) * 127;
-  if (msb<62 || msb>66) {
-    Serial.write(pitchbend);//send command byte
-    Serial.write(lsb);//send data byte #1
-    Serial.write(msb);//send data byte #2
-    pb=true;
+  // joystick X-axis - pitch bend
+  PB_VALUE = (analogRead(X_pin) / 1024.0) * 127;
+  if (PB_VALUE < 62 || PB_VALUE > 66) {
+    sendMidiMessage(PITCHBEND_CMD,CHANNEL1,PB_LSB,PB_VALUE);
+    PBisOn=true;
   }
-  else if (pb==true && msb>62 && msb<66) {
-    Serial.write(pitchbend);//send command byte
-    Serial.write(lsb);//send data byte #1
-    Serial.write(msb);//send data byte #2
-    pb=false;
+  else if (PBisOn==true && PB_VALUE > 62 && PB_VALUE < 66) {
+    sendMidiMessage(PITCHBEND_CMD,CHANNEL1,PB_LSB,PB_VALUE);
+    PBisOn=false;
   }
 
-  // look up changeable midi things for y axis
-  msb1 = (analogRead(Y_pin) / 1024.0) * 127;
-  if (msb1<62 || msb1>66) {
-    Serial.write(controlchange);//send command byte
-    Serial.write(1);//send data byte #1
-    Serial.write(msb1);//send data byte #2
-    cc=true;
+  // joystick Y-axis - control change
+  CC_VALUE = (analogRead(Y_pin) / 1024.0) * 127;
+  if (CC_VALUE < 62 || CC_VALUE > 66) {
+    sendMidiMessage(CONTROLCHANGE1_CMD,CHANNEL1,CC_LSB,CC_VALUE);
+    CCisOn=true;
   }
-  else if (cc==true && msb1>62 && msb1<66) {
-    Serial.write(controlchange);//send command byte
-    Serial.write(1);//send data byte #1
-    Serial.write(msb1);//send data byte #2
-    cc=false;
+  else if ( CCisOn == true && CC_VALUE > 62 && CC_VALUE < 66) {
+    sendMidiMessage(CONTROLCHANGE1_CMD,CHANNEL1,CC_LSB,CC_VALUE);
+    CCisOn=false;
   }
 
   // drums
-  hitavg = analogRead(dp1);
-  if(drumon==false && hitavg>drumtol){
-    // turn note on with velocity, then off
-    vel = (hitavg / 1023.0) * 127;
-    Serial.write(NOTE_ON_CMD + 1); // +1 for midichannel 1 (default 0)
-    Serial.write(31);
-    Serial.write(vel);
-    drumon=true;
+  for(int drumNumber = 0; drumNumber < 6; ++drumNumber){
+    processDrum(drumNumber);
   }
-  else if (drumon==true && hitavg<=drumtol) {
-    Serial.write(NOTE_OFF_CMD + 1);
-    Serial.write(31);
-    Serial.write(vel);
-    drumon=false;
-  }
-  
 }
 
 // functions
 
 void sendMidiMessage(int cmd, int channel, int lsb, int msb) {
-  Serial.write(cmd + channel); // +1 for midichannel 1 (default 0)
-  Serial.write(lsb);
-  Serial.write(msb);
+  Serial.write(cmd + channel); // send command plus the channel number
+  Serial.write(lsb); // least significant bit 
+  Serial.write(msb); // most significant bit
+}
+
+void processDrum(int drumNo) {
+  DRUM_VELOCITY = (analogRead(drumPin[drumNo]) / 1023.0) * 127;
+  if( drumOn[drumNo]==false && DRUM_VELOCITY > DRUM_TOL ){
+    sendMidiMessage(NOTE_ON_CMD,CHANNEL2,DRUM_NOTE[drumNo],DRUM_VELOCITY);
+    drumOn[drumNo]=true;
+  }
+  else if ( drumOn[drumNo]==true && DRUM_VELOCITY <= DRUM_TOL ) {
+    sendMidiMessage(NOTE_OFF_CMD,CHANNEL2,DRUM_NOTE[drumNo],DRUM_VELOCITY);
+    drumOn[drumNo]=false;
+  }
 }
 
 void scanColumn(int colNum)
@@ -207,18 +205,4 @@ void scanColumn(int colNum)
     shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //left sr
   }
   digitalWrite(latchPin, HIGH);
-}
-
-void noteOn(int row, int col)
-{
-  Serial.write(NOTE_ON_CMD);
-  Serial.write(keyToMidiMap[row][col]);
-  Serial.write(NOTE_VELOCITY);
-}
-
-void noteOff(int row, int col)
-{
-  Serial.write(NOTE_OFF_CMD);
-  Serial.write(keyToMidiMap[row][col]);
-  Serial.write(NOTE_VELOCITY);
 }
