@@ -1,6 +1,6 @@
 # old_keyboard_to_midi_controller
 
-*NOTE:* This code and circuit diagram works for my specific keyboard. Your keyboard will likely have a different configuration e.g. different numbers of wires coming from the ribbons. You will have to figure out how to change things around for your keyboard. That said, for the piezos, joystick and midi port this will all be fine for you and this will give you the general idea of how to set things up for your keyboard. Also, there is of course no obligation to use the Arduino Nano like I am, you can use whichever type you have.
+*NOTE:* This code and circuit diagram works for my specific keyboard. Your keyboard will likely have a different keyboard matrix (e.g. different numbers of wires coming from the ribbons). You will have to figure out how to change things around for your keyboard. That said, for the piezos, joystick and midi port this will all be fine for you and this will give you the general idea of how to set things up for your keyboard. Also, there is of course no obligation to use the Arduino Nano like I am, you can use whichever type you have.
 
 **[Video](https://youtu.be/TeOvE9mf0BA)**
 
