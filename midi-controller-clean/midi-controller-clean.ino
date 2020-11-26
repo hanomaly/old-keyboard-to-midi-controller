@@ -73,7 +73,7 @@ const int SERIAL_RATE = 31250; // needs to be 31250 when going through midi port
 void setup()
 {
   
-  int note = 31; // G1
+  int note = 28; 
   
   for(int colCtr = 0; colCtr < NUM_COLS; ++colCtr)
   {
@@ -145,22 +145,22 @@ void loop()
 
   // joystick X-axis - pitch bend
   PB_VALUE = (analogRead(X_pin) / 1024.0) * 127;
-  if (PB_VALUE < 62 || PB_VALUE > 66) {
+  if (PB_VALUE < 53 || PB_VALUE > 56) {
     sendMidiMessage(PITCHBEND_CMD,CHANNEL1,PB_LSB,PB_VALUE);
     PBisOn=true;
   }
-  else if (PBisOn==true && PB_VALUE > 62 && PB_VALUE < 66) {
+  else if (PBisOn==true && PB_VALUE > 53 && PB_VALUE < 56) {
     sendMidiMessage(PITCHBEND_CMD,CHANNEL1,PB_LSB,PB_VALUE);
     PBisOn=false;
   }
 
   // joystick Y-axis - control change
   CC_VALUE = (analogRead(Y_pin) / 1024.0) * 127;
-  if (CC_VALUE < 62 || CC_VALUE > 66) {
+  if (CC_VALUE < 53 || CC_VALUE > 56) {
     sendMidiMessage(CONTROLCHANGE1_CMD,CHANNEL1,CC_LSB,CC_VALUE);
     CCisOn=true;
   }
-  else if ( CCisOn == true && CC_VALUE > 62 && CC_VALUE < 66) {
+  else if ( CCisOn == true && CC_VALUE > 53 && CC_VALUE < 56) {
     sendMidiMessage(CONTROLCHANGE1_CMD,CHANNEL1,CC_LSB,CC_VALUE);
     CCisOn=false;
   }
