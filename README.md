@@ -6,3 +6,4 @@ If plugging into a computer, software requirements are:
 - Any software that can take midi input such as a DAW (Reaper, Ableton, etc).
 
 Circuit diagram:
+![Midi controller circuit diagram](https://github.com/hanomaly/old_keyboard_to_midi_controller/circuit_diagram.png?raw=true)
